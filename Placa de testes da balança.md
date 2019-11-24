@@ -1,4 +1,5 @@
-#Placa de testes da balança
+# Placa de testes da balança
+
 Configuração dos componentes da placa.
 
 |Conexão 1|Cor do fio|Conexão 2|
