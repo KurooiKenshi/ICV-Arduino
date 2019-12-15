@@ -1,5 +1,4 @@
 #include <Servo.h>
-#include <SD.h>
 #include <DS1307.h>
 #include <RTClib.h>
 #include <EEPROM.h>
@@ -170,6 +169,20 @@ class MEMNV //Classe que controla a memória EEPROM.
     }
 };
 
+class Balanca
+{
+    public:
+        Balanca()
+        {
+            //calibrar;
+        }
+
+        int getPeso()
+        {
+            //ver o tipo
+            //retornar peso medido na balança;
+        }
+};
 
   
 MEMNV mem;
