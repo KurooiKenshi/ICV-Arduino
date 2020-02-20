@@ -2,7 +2,9 @@
 #include <DS1307.h>
 #include <RTClib.h>
 #include <EEPROM.h>
+#include <HX711.h>
 
+HX711 scale;
 
 int chipSelect = 2;
 struct openCdt //Estrutura de condição de abertura, representa os elementos que controlam a abertura e fechamento do alimentador.
@@ -79,7 +81,8 @@ class Motor //Classe que controla o servo motor.
     Motor()
     {
       aberto = false;
-      servo1.attach(4);
+      servo1.attach(D2);
+      servo1.write(180);
     }
 
     bool isOpen()
@@ -102,7 +105,7 @@ class Motor //Classe que controla o servo motor.
     void fecha()
     {
        if(isOpen()){
-          servo1.write(360);
+            servo1.write(180);
           delay(1000);
           aberto=0;
         }  
@@ -169,21 +172,26 @@ class MEMNV //Classe que controla a memória EEPROM.
     }
 };
 
-class Balanca
+void calibrarBalanca()
 {
-    public:
-        Balanca()
-        {
-            //calibrar;
-        }
+  scale.begin(D3, D4); 
+  scale.set_scale(); 
 
-        int getPeso()
-        {
-            //ver o tipo
-            //retornar peso medido na balança;
-        }
-};
+  delay(2000);
+  scale.tare(); 
+  //scale.power_down();
+  Serial.println("Balanca Zerada");
+}
 
+float getPeso()
+{
+  
+  float medida = scale.get_units(1);
+  scale.power_down();
+  delay(1000);
+  scale.power_up();
+  return medida;
+}
   
 MEMNV mem;
 Motor M = Motor();
@@ -208,8 +216,8 @@ void setup() {
   
   //O código na sessão a seguir corresponde às configurações do alimentador, aqui serão adicionadas as condições de abertura e também é possivel limpar a lista de condições.
     mem.clearMem();
-    mem.addHora(18,21,10);
-    mem.addHora(18,25,10);
+    mem.addHora(10, 42, 0);
+
   //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   qtd = EEPROM.read(1); //Lê, na memória, quantas condições de abertura foram armazenadas.
@@ -220,7 +228,7 @@ void setup() {
   {
     cdtVet[i] = mem.getHora(i);
   }
-  
+  //calibrarBalanca();
 }
 
 
@@ -239,11 +247,11 @@ void loop()
       if(R.verificaHora((uint8_t)cdtVet[i].hr,(uint8_t)cdtVet[i].mn))
       {
           M.abre();
-          delay(1000);
+          while(!R.verificaHora(10,43)){yield();}
           M.fecha();
-          delay(60000);
       }
   }
   delay(1000);
+
   
 }
