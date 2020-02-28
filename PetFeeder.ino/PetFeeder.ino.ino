@@ -1,4 +1,4 @@
-#include <Servo.h>
+  #include <Servo.h>
 #include <DS1307.h>
 #include <RTClib.h>
 #include <EEPROM.h>
@@ -12,6 +12,7 @@ struct openCdt //Estrutura de condição de abertura, representa os elementos qu
   int mn;
   int hr;
   int peso;
+  bool rdy;
 };typedef struct openCdt openCdt;
 
 class Relogio //Classe que controla o RTC.
@@ -161,6 +162,8 @@ class MEMNV //Classe que controla a memória EEPROM.
       temp.hr = EEPROM.read(((qtd)*3)+2);
       temp.mn = EEPROM.read(((qtd)*3)+3);
       temp.peso = (EEPROM.read(((qtd)*3)+4))*10;
+      temp.rdy = true;
+      
 
       return temp;
     }
@@ -175,7 +178,7 @@ class MEMNV //Classe que controla a memória EEPROM.
 void calibrarBalanca()
 {
   scale.begin(D3, D4); 
-  scale.set_scale(); 
+  scale.set_scale(447500); 
 
   delay(2000);
   scale.tare(); 
@@ -183,10 +186,10 @@ void calibrarBalanca()
   Serial.println("Balanca Zerada");
 }
 
-float getPeso()
+int getPeso()
 {
   
-  float medida = scale.get_units(1);
+  int medida = (int)(scale.get_units(1)*1000);
   scale.power_down();
   delay(1000);
   scale.power_up();
@@ -216,7 +219,8 @@ void setup() {
   
   //O código na sessão a seguir corresponde às configurações do alimentador, aqui serão adicionadas as condições de abertura e também é possivel limpar a lista de condições.
     mem.clearMem();
-    mem.addHora(10, 42, 0);
+    mem.addHora(15, 45, 250);
+    mem.addHora(15, 47, 250);
 
   //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -228,7 +232,7 @@ void setup() {
   {
     cdtVet[i] = mem.getHora(i);
   }
-  //calibrarBalanca();
+  calibrarBalanca();
 }
 
 
@@ -244,11 +248,16 @@ void loop()
 {
   for(int i = 0;i<qtd;i++) //Compara as condições de abertura para verificar qual ação executar.
   {
-      if(R.verificaHora((uint8_t)cdtVet[i].hr,(uint8_t)cdtVet[i].mn))
+      if(R.verificaHora((uint8_t)cdtVet[i].hr,(uint8_t)cdtVet[i].mn) && getPeso()<cdtVet[i].peso && cdtVet[i].rdy)
       {
           M.abre();
-          while(!R.verificaHora(10,43)){yield();}
+          while(getPeso()<cdtVet[i].peso){yield();}
           M.fecha();
+          for(int j = 0;j<qtd;j++)
+          {
+            cdtVet[j].rdy = true;
+          }
+          cdtVet[i].rdy = false;
       }
   }
   delay(1000);
